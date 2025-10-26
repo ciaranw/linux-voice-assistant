@@ -30,7 +30,7 @@ def is_apple() -> bool:
 
 def get_libtensorflowlite_lib_path() -> str:
     sysname = os.uname().sysname.lower()
-    architecture = platform.machine()
+    architecture = "arm64" if is_arm() else "amd64"
     extension = 'dylib' if "darwin" == sysname else 'so'
 
     return _LIB_DIR / f"{sysname}_{architecture}" / f"libtensorflowlite_c.{extension}"
