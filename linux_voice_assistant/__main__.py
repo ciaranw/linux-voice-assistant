@@ -18,9 +18,10 @@ from .mqtt_controller import MqttController
 from .microwakeword import MicroWakeWord, MicroWakeWordFeatures
 from .models import AvailableWakeWord, Preferences, ServerState, WakeWordType
 from .mpv_player import MpvMediaPlayer
-from .openwakeword import OpenWakeWord, OpenWakeWordFeatures
+from .openwakeword.tflite import TFLiteOpenWakeWord, TFLiteOpenWakeWordFeatures
+from .openwakeword.onnx import OnnxOpenWakeWord, OnnxOpenWakeWordFeatures
 from .satellite import VoiceSatelliteProtocol
-from .util import get_mac, is_arm
+from .util import get_mac, get_libtensorflowlite_lib_path
 from .zeroconf import HomeAssistantZeroconf
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,11 +30,6 @@ _REPO_DIR = _MODULE_DIR.parent
 _WAKEWORDS_DIR = _REPO_DIR / "wakewords"
 _OWW_DIR = _WAKEWORDS_DIR / "openWakeWord"
 _SOUNDS_DIR = _REPO_DIR / "sounds"
-
-if is_arm():
-    _LIB_DIR = _REPO_DIR / "lib" / "linux_arm64"
-else:
-    _LIB_DIR = _REPO_DIR / "lib" / "linux_amd64"
 
 # -----------------------------------------------------------------------------
 
@@ -191,9 +187,9 @@ async def main() -> None:
 
     _LOGGER.debug("Available wake words: %s", list(sorted(available_wake_words.keys())))
     
-    libtensorflowlite_c_path = _LIB_DIR / "libtensorflowlite_c.so"
+    libtensorflowlite_c_path = get_libtensorflowlite_lib_path()
     
-    wake_models: Dict[str, Union[MicroWakeWord, OpenWakeWord]] = {}
+    wake_models: Dict[str, Union[MicroWakeWord, TFLiteOpenWakeWord, OnnxOpenWakeWord]] = {}
     if preferences.active_wake_words:
         for wake_word_id in preferences.active_wake_words:
             wake_word = available_wake_words.get(wake_word_id)
@@ -276,12 +272,18 @@ async def main() -> None:
     _LOGGER.debug("Server stopped")
 
 def process_audio(state: ServerState):
-    wake_words: List[Union[MicroWakeWord, OpenWakeWord]] = []
+    wake_words: List[Union[MicroWakeWord, TFLiteOpenWakeWord, OnnxOpenWakeWord]] = []
     micro_features: Optional[MicroWakeWordFeatures] = None
     micro_inputs: List[np.ndarray] = []
-    oww_features: Optional[OpenWakeWordFeatures] = None
-    oww_inputs: List[np.ndarray] = []
-    has_oww = False
+
+    oww_tflite_features: Optional[TFLiteOpenWakeWordFeatures] = None
+    oww_tflite_inputs: List[np.ndarray] = []
+    has_oww_tflite = False
+
+    oww_onnx_features: Optional[OnnxOpenWakeWordFeatures] = None
+    oww_onnx_inputs: List[np.ndarray] = []
+    has_oww_onnx = False
+
     last_active: Optional[float] = None
     try:
         while True:
@@ -294,24 +296,32 @@ def process_audio(state: ServerState):
             if (not wake_words) or (state.wake_words_changed and state.wake_words):
                 state.wake_words_changed = False
                 wake_words = [ww for ww in state.wake_words.values() if ww.is_active]
-                has_oww = any(isinstance(ww, OpenWakeWord) for ww in wake_words)
+                has_oww_tflite = any(isinstance(ww, TFLiteOpenWakeWord) for ww in wake_words)
+                has_oww_onnx = any(isinstance(ww, OnnxOpenWakeWord) for ww in wake_words)
                 if micro_features is None:
                     micro_features = MicroWakeWordFeatures(libtensorflowlite_c_path=state.libtensorflowlite_c_path)
-                if has_oww and (oww_features is None):
-                    oww_features = OpenWakeWordFeatures(melspectrogram_model=state.oww_melspectrogram_path, embedding_model=state.oww_embedding_path, libtensorflowlite_c_path=state.libtensorflowlite_c_path)
+                if has_oww_tflite and (oww_tflite_features is None):
+                    oww_tflite_features = TFLiteOpenWakeWordFeatures(melspectrogram_model=state.oww_melspectrogram_path, embedding_model=state.oww_embedding_path, libtensorflowlite_c_path=state.libtensorflowlite_c_path)
+                if has_oww_onnx and (oww_onnx_features is None):
+                    oww_onnx_features = OnnxOpenWakeWordFeatures(melspectrogram_model=state.oww_melspectrogram_path.with_suffix(".onnx"), embedding_model=state.oww_embedding_path.with_suffix(".onnx"))
             try:
                 state.satellite.handle_audio(audio_chunk)
                 assert micro_features is not None
                 micro_inputs.clear(); micro_inputs.extend(micro_features.process_streaming(audio_chunk))
-                if has_oww:
-                    assert oww_features is not None
-                    oww_inputs.clear(); oww_inputs.extend(oww_features.process_streaming(audio_chunk))
+                if has_oww_tflite:
+                    assert oww_tflite_features is not None
+                    oww_tflite_inputs.clear(); oww_tflite_inputs.extend(oww_tflite_features.process_streaming(audio_chunk))
+                if has_oww_onnx:
+                    assert oww_onnx_features is not None
+                    oww_onnx_inputs.clear(); oww_onnx_inputs.extend(oww_onnx_features.process_streaming(audio_chunk))
                 for wake_word in wake_words:
                     activated = False
                     if isinstance(wake_word, MicroWakeWord):
                         if any(wake_word.process_streaming(mi) for mi in micro_inputs): activated = True
-                    elif isinstance(wake_word, OpenWakeWord):
-                        if any(p > 0.5 for oi in oww_inputs for p in wake_word.process_streaming(oi)): activated = True
+                    elif isinstance(wake_word, TFLiteOpenWakeWord):
+                        if any(p > 0.5 for oi in oww_tflite_inputs for p in wake_word.process_streaming(oi)): activated = True
+                    elif isinstance(wake_word, OnnxOpenWakeWord):
+                        if any(p > 0.5 for oi in oww_onnx_inputs for p in wake_word.process_streaming(oi)): activated = True
                     if activated:
                         now = time.monotonic()
                         if (last_active is None) or ((now - last_active) > state.refractory_seconds):

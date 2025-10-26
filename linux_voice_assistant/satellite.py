@@ -35,7 +35,8 @@ from .api_server import APIServer
 from .entity import MediaPlayerEntity
 from .microwakeword import MicroWakeWord
 from .models import ServerState
-from .openwakeword import OpenWakeWord
+from .openwakeword.tflite import TFLiteOpenWakeWord
+from .openwakeword.onnx import OnnxOpenWakeWord
 from .util import call_all
 
 _LOGGER = logging.getLogger(__name__)
@@ -212,7 +213,7 @@ class VoiceSatelliteProtocol(APIServer):
             return
         self.send_messages([VoiceAssistantAudio(data=audio_chunk)])
 
-    def wakeup(self, wake_word: Union[MicroWakeWord, OpenWakeWord]) -> None:
+    def wakeup(self, wake_word: Union[MicroWakeWord, TFLiteOpenWakeWord, OnnxOpenWakeWord]) -> None:
         self.state.event_bus.publish("voice_wakeword")
         if self._timer_finished:
             self._timer_finished = False

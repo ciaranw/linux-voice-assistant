@@ -14,8 +14,9 @@ from .event_bus import EventBus
 if TYPE_CHECKING:
     from .entity import ESPHomeEntity, MediaPlayerEntity
     from .microwakeword import MicroWakeWord
+    from .openwakeword.tflite import TFLiteOpenWakeWord
+    from .openwakeword.onnx import OnnxOpenWakeWord
     from .mpv_player import MpvMediaPlayer
-    from .openwakeword import OpenWakeWord
     from .satellite import VoiceSatelliteProtocol
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class AvailableWakeWord:
 
     def load(
         self, libtensorflowlite_c_path: Path
-    ) -> "Union[MicroWakeWord, OpenWakeWord]":
+    ) -> "Union[MicroWakeWord, TFLiteOpenWakeWord, OnnxOpenWakeWord]":
         if self.type == WakeWordType.MICRO_WAKE_WORD:
             from .microwakeword import MicroWakeWord
 
@@ -46,9 +47,9 @@ class AvailableWakeWord:
             )
 
         if self.type == WakeWordType.OPEN_WAKE_WORD:
-            from .openwakeword import OpenWakeWord
+            from .openwakeword import open_wake_word_from_config
 
-            return OpenWakeWord.from_config(
+            return open_wake_word_from_config(
                 config_path=self.config_path,
                 libtensorflowlite_c_path=libtensorflowlite_c_path,
             )
@@ -71,7 +72,7 @@ class ServerState:
     audio_queue: "Queue[Optional[bytes]]"
     entities: "List[ESPHomeEntity]"
     available_wake_words: "Dict[str, AvailableWakeWord]"
-    wake_words: "Dict[str, Union[MicroWakeWord, OpenWakeWord]]"
+    wake_words: "Dict[str, Union[MicroWakeWord, TFLiteOpenWakeWord, OnnxOpenWakeWord]]"
     stop_word: "MicroWakeWord"
     music_player: "MpvMediaPlayer"
     tts_player: "MpvMediaPlayer"

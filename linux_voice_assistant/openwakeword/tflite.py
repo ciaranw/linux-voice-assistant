@@ -1,4 +1,4 @@
-"""openWakeWord implementation."""
+"""openWakeWord tflite implementation."""
 
 import ctypes as C
 import json
@@ -8,7 +8,7 @@ from typing import Final, Union
 
 import numpy as np
 
-from .wakeword import TfLiteWakeWord
+from ..wakeword import TfLiteWakeWord
 
 c_void_p = C.c_void_p
 c_int32 = C.c_int32
@@ -49,7 +49,7 @@ EMB_SHAPE: Final = (BATCH_SIZE, EMB_FEATURES, NUM_MELS, 1)
 # ww = [batch x window x features (96)] => [batch x probability]
 
 
-class OpenWakeWord(TfLiteWakeWord):
+class TFLiteOpenWakeWord(TfLiteWakeWord):
     def __init__(
         self,
         id: str,  # pylint: disable=redefined-builtin
@@ -142,12 +142,12 @@ class OpenWakeWord(TfLiteWakeWord):
     def from_config(
         config_path: Union[str, Path],
         libtensorflowlite_c_path: Union[str, Path],
-    ) -> "OpenWakeWord":
+    ) -> "TFLiteOpenWakeWord":
         config_path = Path(config_path)
         with open(config_path, "r", encoding="utf-8") as config_file:
             config = json.load(config_file)
 
-        return OpenWakeWord(
+        return TFLiteOpenWakeWord(
             id=Path(config["model"]).stem,
             wake_word=config["wake_word"],
             tflite_model=config_path.parent / config["model"],
@@ -158,7 +158,7 @@ class OpenWakeWord(TfLiteWakeWord):
 # -----------------------------------------------------------------------------
 
 
-class OpenWakeWordFeatures(TfLiteWakeWord):
+class TFLiteOpenWakeWordFeatures(TfLiteWakeWord):
     def __init__(
         self,
         melspectrogram_model: Union[str, Path],

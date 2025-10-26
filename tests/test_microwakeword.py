@@ -4,19 +4,14 @@ import wave
 from pathlib import Path
 
 from linux_voice_assistant.microwakeword import MicroWakeWord, MicroWakeWordFeatures
-from linux_voice_assistant.util import is_arm
+from linux_voice_assistant.util import get_libtensorflowlite_lib_path
 
 _TESTS_DIR = Path(__file__).parent
 _REPO_DIR = _TESTS_DIR.parent
 _MICRO_DIR = _REPO_DIR / "wakewords"
 
-if is_arm():
-    _LIB_DIR = _REPO_DIR / "lib" / "linux_arm64"
-else:
-    _LIB_DIR = _REPO_DIR / "lib" / "linux_amd64"
 
-
-libtensorflowlite_c_path = _LIB_DIR / "libtensorflowlite_c.so"
+libtensorflowlite_c_path = get_libtensorflowlite_lib_path()
 
 
 def test_features() -> None:
