@@ -244,3 +244,6 @@ class OnnxOpenWakeWordFeatures:
                 embedding = self.embedding_model_predict(mels_tensor)
                 embedding = embedding.reshape((1, 1, -1, WW_FEATURES))
                 yield embedding
+
+    def get_audio_buffer(self):
+        return np.trim_zeros(self.audio, trim="f").astype(np.int16).tobytes()

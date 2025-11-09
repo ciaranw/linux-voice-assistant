@@ -291,3 +291,6 @@ class TFLiteOpenWakeWordFeatures(TfLiteWakeWord):
                 )
                 emb = emb.reshape((1, 1, -1, WW_FEATURES))
                 yield emb
+
+    def get_audio_buffer(self):
+        return np.trim_zeros(self.audio, trim="f").astype(np.int16).tobytes()

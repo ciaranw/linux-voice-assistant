@@ -23,6 +23,7 @@ from .openwakeword.onnx import OnnxOpenWakeWord, OnnxOpenWakeWordFeatures
 from .satellite import VoiceSatelliteProtocol
 from .util import get_mac, get_libtensorflowlite_lib_path
 from .zeroconf import HomeAssistantZeroconf
+from .sample_writer import SampleWriter
 
 _LOGGER = logging.getLogger(__name__)
 _MODULE_DIR = Path(__file__).parent
@@ -151,6 +152,8 @@ async def main() -> None:
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to console"
     )
+    parser.add_argument("--wyoming-sample-receiver-host", help="Host of wyoming server to send successful wake word detection samples")
+    parser.add_argument("--wyoming-sample-receiver-port", type=int, help="Host of wyoming server to send successful wake word detection samples")
     args = parser.parse_args()
     
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
@@ -232,6 +235,8 @@ async def main() -> None:
         oww_melspectrogram_path=Path(args.oww_melspectrogram_model),
         oww_embedding_path=Path(args.oww_embedding_model),
         refractory_seconds=args.refractory_seconds,
+        wyoming_sample_receiver_host=args.wyoming_sample_reciever_host,
+        wyoming_sample_receiver_port=args.wyoming_sample_reciever_port,
     )
     
     led_controller = LedController(
@@ -284,6 +289,10 @@ def process_audio(state: ServerState):
     oww_onnx_inputs: List[np.ndarray] = []
     has_oww_onnx = False
 
+    sample_writer = None
+    if state.wyoming_sample_receiver_host is not None and state.wyoming_sample_receiver_port is not None:
+        sample_writer = SampleWriter(host=state.wyoming_sample_receiver_host, port=state.wyoming_sample_receiver_port)
+
     last_active: Optional[float] = None
     try:
         while True:
@@ -324,6 +333,13 @@ def process_audio(state: ServerState):
                         if any(p > 0.5 for oi in oww_onnx_inputs for p in wake_word.process_streaming(oi)): activated = True
                     if activated:
                         now = time.monotonic()
+                        if state.wake_word_output_dir is not None:
+                            if oww_onnx_features is not None and sample_writer is not None:
+                                sample_writer.write_sample_in_thread(oww_onnx_features.audio)
+
+                            if oww_tflite_features is not None and sample_writer is not None:
+                                sample_writer.write_sample_in_thread(oww_tflite_features.audio)
+
                         if (last_active is None) or ((now - last_active) > state.refractory_seconds):
                             state.satellite.wakeup(wake_word)
                             last_active = now

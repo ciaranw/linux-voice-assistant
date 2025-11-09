@@ -85,6 +85,8 @@ class ServerState:
     loop: asyncio.AbstractEventLoop
     oww_melspectrogram_path: Path
     oww_embedding_path: Path
+    wyoming_sample_receiver_host: str
+    wyoming_sample_receiver_port: str
 
     # --- Fields WITH default values ---
     media_player_entity: "Optional[MediaPlayerEntity]" = None
