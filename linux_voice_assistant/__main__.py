@@ -334,10 +334,10 @@ def process_audio(state: ServerState):
                     if activated:
                         now = time.monotonic()
                         if oww_onnx_features is not None and sample_writer is not None:
-                            sample_writer.write_sample_in_thread(oww_onnx_features.audio)
+                            sample_writer.write_sample_in_thread(oww_onnx_features.get_audio_buffer())
 
                         if oww_tflite_features is not None and sample_writer is not None:
-                            sample_writer.write_sample_in_thread(oww_tflite_features.audio)
+                            sample_writer.write_sample_in_thread(oww_tflite_features.get_audio_buffer())
 
                         if (last_active is None) or ((now - last_active) > state.refractory_seconds):
                             state.satellite.wakeup(wake_word)
