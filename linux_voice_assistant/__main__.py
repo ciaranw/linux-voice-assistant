@@ -235,8 +235,8 @@ async def main() -> None:
         oww_melspectrogram_path=Path(args.oww_melspectrogram_model),
         oww_embedding_path=Path(args.oww_embedding_model),
         refractory_seconds=args.refractory_seconds,
-        wyoming_sample_receiver_host=args.wyoming_sample_reciever_host,
-        wyoming_sample_receiver_port=args.wyoming_sample_reciever_port,
+        wyoming_sample_receiver_host=args.wyoming_sample_receiver_host,
+        wyoming_sample_receiver_port=args.wyoming_sample_receiver_port,
     )
     
     led_controller = LedController(
