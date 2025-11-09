@@ -21,15 +21,15 @@ def test_tflite_features():
         libtensorflowlite_c_path=libtensorflowlite_c_path,
     )
     ww = TFLiteOpenWakeWord(
-        id="ok_nabu",
-        wake_word="okay nabu",
-        tflite_model=_OWW_DIR / "ok_nabu_v0.1.tflite",
+        id="hey_dick_head",
+        wake_word="hey dick head",
+        tflite_model=_OWW_DIR / "hey_dick_head.tflite",
         libtensorflowlite_c_path=libtensorflowlite_c_path,
     )
 
     process_test_features(features=features, ww=ww)
     # negative test fails for some reason?
-    # process_test_features_no_match(features=features, ww=ww)
+    process_test_features_no_match(features=features, ww=ww)
 
 def test_onnx_features():
     features = OnnxOpenWakeWordFeatures(
@@ -37,9 +37,9 @@ def test_onnx_features():
         embedding_model=_OWW_DIR / "embedding_model.onnx",
     )
     ww = OnnxOpenWakeWord(
-        id="ok_nabu",
-        wake_word="okay nabu",
-        onnx_model=_OWW_DIR / "ok_nabu_v0.2.onnx",
+        id="hey_dick_head",
+        wake_word="hey dick head",
+        onnx_model=_OWW_DIR / "hey_dick_head.onnx",
     )
 
     process_test_features(features=features, ww=ww)
@@ -51,7 +51,7 @@ def process_test_features(
     ww: Union[TFLiteOpenWakeWord, OnnxOpenWakeWord]
 ) -> None:
     max_prob = 0.0
-    with wave.open(str(_TESTS_DIR / "ok_nabu.wav"), "rb") as wav_file:
+    with wave.open(str(_TESTS_DIR / "hey_dick_head.wav"), "rb") as wav_file:
         assert wav_file.getframerate() == 16000
         assert wav_file.getsampwidth() == 2
         assert wav_file.getnchannels() == 1
@@ -61,6 +61,7 @@ def process_test_features(
         ):
             for prob in ww.process_streaming(embeddings):
                 max_prob = max(max_prob, prob)
+
 
     assert max_prob > 0.5
 

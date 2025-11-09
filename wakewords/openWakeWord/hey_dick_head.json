@@ -1,0 +1,9 @@
+{
+  "type": "openWakeWord",
+  "wake_word": "hey_dick_head",
+  "model": "hey_dick_head.onnx",
+  "version": 2,
+  "trained_languages": [
+    "en"
+  ]
+}
