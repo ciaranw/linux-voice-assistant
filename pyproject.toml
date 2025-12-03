@@ -3,15 +3,15 @@ requires = ["setuptools>=62.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name        = "linux-voice-assistant"
-version     = "1.0.0"
-license     = {text = "Apache-2.0"}
+name = "linux-voice-assistant"
+version = "1.0.0"
+license = { text = "Apache-2.0" }
 description = "Linux voice assistant for Home Assistant using the ESPHome protocol"
-readme      = "README.md"
-authors     = [
-    {name = "The Home Assistant Authors", email = "hello@home-assistant.io"}
+readme = "README.md"
+authors = [
+    { name = "The Home Assistant Authors", email = "hello@home-assistant.io" },
 ]
-keywords    = ["home", "assistant", "voice", "esphome", "linux"]
+keywords = ["home", "assistant", "voice", "esphome", "linux"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -40,28 +40,21 @@ dependencies = [
     "RPi.GPIO",
     "gpiozero",
     "spidev",
+    "wyoming>=1.8.0",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "black",
-    "flake8",
-    "mypy",
-    "pylint",
-    "pytest",
-]
+dev = ["black", "flake8", "mypy", "pylint", "pytest"]
 
 # Optional GUI/tray dependencies. Only needed on desktop installs that use lva_tray_client.
-tray = [
-    "PyQt5>=5.15",
-]
+tray = ["PyQt5>=5.15"]
 
 [project.urls]
 "Source Code" = "https://github.com/imonlinux/linux-voice-assistant"
 
 [tool.setuptools]
 platforms = ["any"]
-zip-safe  = true
+zip-safe = true
 include-package-data = true
 
 [tool.setuptools.packages.find]

@@ -13,6 +13,12 @@ _LOGGER = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 @dataclass
+class SampleWriterConfig:
+    """Settings for wyoming sample writer"""
+    host: Optional[str] = None
+    port: Optional[int] = None
+
+@dataclass
 class AudioConfig:
     """Settings for audio input and output."""
     input_device: Optional[str] = None
@@ -87,6 +93,7 @@ class Config:
     led: LedConfig = field(default_factory=LedConfig)
     mqtt: MqttConfig = field(default_factory=MqttConfig)
     button: ButtonConfig = field(default_factory=ButtonConfig)
+    sample_writer: SampleWriterConfig = field(default_factory=SampleWriterConfig)
 
 # -----------------------------------------------------------------------------
 # Helper Function
@@ -119,6 +126,7 @@ def load_config_from_json(config_path: Path) -> Config:
     led_config = LedConfig(**raw_data.get("led", {}))
     mqtt_config = MqttConfig(**raw_data.get("mqtt", {}))
     button_config = ButtonConfig(**raw_data.get("button", {}))
+    sample_writer_config = SampleWriterConfig(**raw_data.get("sample_writer", {}))
 
     # --- Step 3: Set MQTT 'enabled' flag ---
     if mqtt_config.host:
@@ -133,4 +141,5 @@ def load_config_from_json(config_path: Path) -> Config:
         led=led_config,
         mqtt=mqtt_config,
         button=button_config,
+        sample_writer=sample_writer_config
     )

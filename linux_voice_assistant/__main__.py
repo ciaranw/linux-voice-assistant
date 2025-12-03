@@ -169,7 +169,7 @@ async def main() -> None:
     _init_controllers(loop, event_bus, state, config, preferences)
 
     # --- 8. Start Audio Engine ---
-    audio_engine = AudioEngine(state, mic, config.audio.input_block_size)
+    audio_engine = AudioEngine(state, mic, config.audio.input_block_size, config.sample_writer)
     audio_engine.start()
 
     # --- 9. Run Server ---

@@ -6,6 +6,7 @@ import threading
 import time
 import warnings
 from typing import List, Optional, Union
+from pathlib import Path
 
 import numpy as np
 import soundcard as sc
@@ -14,19 +15,29 @@ from pymicro_wakeword import MicroWakeWord, MicroWakeWordFeatures
 from pyopen_wakeword import OpenWakeWord, OpenWakeWordFeatures
 
 from .models import ServerState
+from .config import SampleWriterConfig
+from .sample_writer import SampleWriter
 
 _LOGGER = logging.getLogger(__name__)
 
 # Suppress the "log(0)" warning from pymicro_wakeword
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="pymicro_wakeword")
 
+_SAMPLE_RATE = 16000
 
 class AudioEngine:
-    def __init__(self, state: ServerState, mic, block_size: int):
+    def __init__(self, state: ServerState, mic, block_size: int, sample_writer_config: SampleWriterConfig):
         self.state = state
         self.mic = mic
         self.block_size = block_size
         self._thread: Optional[threading.Thread] = None
+        self.audio_buffer = None
+        if sample_writer_config.host is not None:
+            self.audio_buffer = np.zeros(shape=(_SAMPLE_RATE * 5,), dtype=np.float32)
+            self.sample_writer = SampleWriter(
+                host=sample_writer_config.host,
+                port=sample_writer_config.port
+            )
 
     def start(self):
         """Starts the audio processing thread."""
@@ -44,6 +55,16 @@ class AudioEngine:
         self.state.mic_muted_event.set()
         if self._thread:
             self._thread.join()
+
+    def push_audio_into_buffer(self, chunk_array):
+        # Shift samples left
+        self.audio_buffer[: -len(chunk_array)] = self.audio_buffer[len(chunk_array) :]
+
+        # Add new samples to end
+        self.audio_buffer[-len(chunk_array) :] = chunk_array
+
+    def get_audio_buffer(self):
+        return (np.clip(self.audio_buffer, -1.0, 1.0) * 32767.0).astype("<i2").tobytes()
 
     def _process_audio(self):
         """Main audio processing loop."""
@@ -106,6 +127,9 @@ class AudioEngine:
                             .astype("<i2")
                             .tobytes()
                         )
+
+                        if self.audio_buffer is not None:
+                            self.push_audio_into_buffer(audio_chunk_array)
 
                         if self.state.satellite is None:
                             time.sleep(0.01)
@@ -196,6 +220,8 @@ class AudioEngine:
                                         self.state.loop.call_soon_threadsafe(
                                             self.state.satellite.wakeup, wake_word
                                         )
+                                        if self.sample_writer is not None:
+                                            self.sample_writer.write_sample_in_thread(self.get_audio_buffer())
                                         last_active = now
                                     else:
                                         _LOGGER.debug(
